@@ -4,7 +4,7 @@
   "description": "Rust force-directed graph layout with Barnes-Hut N-body simulation",
   "main": "index.js",
   "types": "index.d.ts",
-  "license": "(MIT OR Apache-2.0)",
+  "license": "AGPL-3.0-only",
   "author": "xingwangzhe",
   "repository": {
     "type": "git",
