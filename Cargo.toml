@@ -1,0 +1,22 @@
+
+[package]
+authors = ["xingwangzhe"]
+edition = "2021"
+name = "force-rs"
+version = "0.1.0"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+napi = "3.0.0"
+napi-derive = "3.0.0"
+rayon = "1.12.0"
+zhifeng_impl_barnes_hut_tree = "0.0.20240603"
+
+[build-dependencies]
+napi-build = "2"
+
+[profile.release]
+lto = true
+strip = "symbols"

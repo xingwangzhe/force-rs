@@ -1,0 +1,266 @@
+name: CI
+env:
+  DEBUG: napi:*
+  APP_NAME: force-rs
+  MACOSX_DEPLOYMENT_TARGET: '10.13'
+  CARGO_INCREMENTAL: '1'
+on:
+  push:
+    branches:
+      - main
+    tags-ignore:
+      - '**'
+    paths-ignore:
+      - '**/*.md'
+      - LICENSE
+      - '**/*.gitignore'
+      - .editorconfig
+      - docs/**
+  pull_request:
+  workflow_dispatch:
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: Setup node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+      - name: Install dependencies
+        run: bun install
+      - name: Oxlint
+        run: bun run lint
+      - name: Cargo fmt
+        run: cargo fmt -- --check
+      - name: Clippy
+        run: cargo clippy
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        settings:
+          - host: macos-latest
+            target: x86_64-apple-darwin
+            build: bun run build --target x86_64-apple-darwin
+          - host: macos-latest
+            target: aarch64-apple-darwin
+            build: bun run build --target aarch64-apple-darwin
+          - host: windows-latest
+            build: bun run build --target x86_64-pc-windows-msvc
+            target: x86_64-pc-windows-msvc
+          - host: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            build: bun run build --target x86_64-unknown-linux-gnu --use-napi-cross
+          - host: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            build: bun run build --target x86_64-unknown-linux-musl -x
+          - host: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            build: bun run build --target aarch64-unknown-linux-gnu --use-napi-cross
+    name: stable - ${{ matrix.settings.target }} - node@22
+    runs-on: ${{ matrix.settings.host }}
+    continue-on-error: ${{ contains(matrix.settings.target, 'musl') }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: Setup node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          targets: ${{ matrix.settings.target }}
+      - name: Cache cargo
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            ~/.napi-rs
+            .cargo-cache
+            target/
+          key: ${{ matrix.settings.target }}-cargo-${{ matrix.settings.host }}
+      - uses: mlugg/setup-zig@v2
+        if: ${{ contains(matrix.settings.target, 'musl') }}
+        with:
+          version: 0.14.1
+      - name: Install cargo-zigbuild
+        uses: taiki-e/install-action@v2
+        if: ${{ contains(matrix.settings.target, 'musl') }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          tool: cargo-zigbuild
+      - name: Setup toolchain
+        run: ${{ matrix.settings.setup }}
+        if: ${{ matrix.settings.setup }}
+        shell: bash
+      - name: Install dependencies
+        run: bun install
+      - name: Build
+        run: ${{ matrix.settings.build }}
+        shell: bash
+      - name: Upload artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: bindings-${{ matrix.settings.target }}
+          path: ${{ env.APP_NAME }}.*.node
+          if-no-files-found: error
+  test-macOS-windows-binding:
+    name: Test bindings on ${{ matrix.settings.target }} - node@${{ matrix.node }}
+    needs:
+      - build
+    strategy:
+      fail-fast: false
+      matrix:
+        settings:
+          - host: macos-15-intel
+            target: x86_64-apple-darwin
+          - host: macos-latest
+            target: aarch64-apple-darwin
+          - host: windows-latest
+            target: x86_64-pc-windows-msvc
+        node:
+          - '22'
+          - '24'
+    runs-on: ${{ matrix.settings.host }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: Setup node
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Install dependencies
+        run: bun install
+      - name: Download artifacts
+        uses: actions/download-artifact@v8
+        with:
+          name: bindings-${{ matrix.settings.target }}
+          path: .
+      - name: List packages
+        run: ls -R .
+        shell: bash
+      - name: Test bindings
+        run: node --test bfs.test.mjs
+  test-linux-binding:
+    name: Test ${{ matrix.target }} - node@${{ matrix.node }}
+    needs:
+      - build
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - x86_64-unknown-linux-gnu
+          - x86_64-unknown-linux-musl
+          - aarch64-unknown-linux-gnu
+        node:
+          - '22'
+          - '24'
+    runs-on: ${{ contains(matrix.target, 'aarch64') && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: Setup node
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Output docker params
+        id: docker
+        run: |
+          node -e "
+            if ('${{ matrix.target }}'.startsWith('aarch64')) {
+              console.log('PLATFORM=linux/arm64')
+            } else {
+              console.log('PLATFORM=linux/amd64')
+            }
+          " >> $GITHUB_OUTPUT
+          node -e "
+            if ('${{ matrix.target }}'.endsWith('-musl')) {
+              console.log('IMAGE=node:${{ matrix.node }}-alpine')
+            } else {
+              console.log('IMAGE=node:${{ matrix.node }}-slim')
+            }
+          " >> $GITHUB_OUTPUT
+      - name: Install dependencies
+        run: bun install
+      - name: Download artifacts
+        uses: actions/download-artifact@v8
+        with:
+          name: bindings-${{ matrix.target }}
+          path: .
+      - name: List packages
+        run: ls -R .
+        shell: bash
+      - name: Test bindings
+        uses: tj-actions/docker-run@v2
+        with:
+          image: ${{ steps.docker.outputs.IMAGE }}
+          name: test-bindings-${{ matrix.target }}
+          options: -v ${{ github.workspace }}:${{ github.workspace }} -w ${{ github.workspace }} --platform ${{ steps.docker.outputs.PLATFORM }}
+          args: node --test bfs.test.mjs
+  publish:
+    name: Publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+    needs:
+      - lint
+      - test-macOS-windows-binding
+      - test-linux-binding
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: Setup node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+      - name: Install dependencies
+        run: bun install
+      - name: Download all artifacts
+        uses: actions/download-artifact@v8
+        with:
+          path: artifacts
+      - name: Move artifacts to root
+        run: |
+          find artifacts -type f \( -name "*.node" -o -name "*.wasm" \) -exec cp {} . \;
+      - name: List packages
+        run: ls -la *.node 2>/dev/null || true
+        shell: bash
+      - name: Publish
+        run: |
+          if git log -1 --pretty=%B | grep "^[0-9]\+\.[0-9]\+\.[0-9]\+$";
+          then
+            npm publish --provenance --access public
+          elif git log -1 --pretty=%B | grep "^[0-9]\+\.[0-9]\+\.[0-9]\+";
+          then
+            npm publish --provenance --tag next --access public
+          else
+            echo "Not a release, skipping publish"
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

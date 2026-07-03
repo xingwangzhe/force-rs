@@ -1,0 +1,48 @@
+{
+  "name": "@xingwangzhe/force-rs",
+  "version": "0.1.0",
+  "description": "Rust force-directed graph layout with Barnes-Hut N-body simulation",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "license": "(MIT OR Apache-2.0)",
+  "author": "xingwangzhe",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/xingwangzhe/force-rs.git"
+  },
+  "keywords": ["force-layout", "barnes-hut", "d3-force", "napi-rs", "rust", "graph-layout"],
+  "files": [
+    "index.d.ts",
+    "index.js",
+    "force-rs.*.node"
+  ],
+  "napi": {
+    "binaryName": "force-rs",
+    "targets": [
+      "x86_64-apple-darwin",
+      "aarch64-apple-darwin",
+      "x86_64-pc-windows-msvc",
+      "x86_64-unknown-linux-gnu",
+      "x86_64-unknown-linux-musl",
+      "aarch64-unknown-linux-gnu"
+    ]
+  },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/",
+    "access": "public"
+  },
+  "engines": {
+    "node": ">= 18"
+  },
+  "scripts": {
+    "build": "napi build --platform --release",
+    "test": "node --test force.test.mjs",
+    "lint": "oxlint",
+    "artifacts": "napi artifacts"
+  },
+  "devDependencies": {
+    "@napi-rs/cli": "^3.2.0",
+    "oxlint": "^1.72.0",
+    "typescript": "^6.0.0"
+  }
+}
