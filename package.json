@@ -38,10 +38,6 @@
       "aarch64-unknown-linux-gnu"
     ]
   },
-  "publishConfig": {
-    "registry": "https://registry.npmjs.org/",
-    "access": "public"
-  },
   "engines": {
     "node": ">= 18"
   },
@@ -49,20 +45,11 @@
     "build": "napi build --platform --release",
     "test": "node --test force.test.mjs",
     "lint": "oxlint",
-    "artifacts": "napi artifacts",
-    "prepublishOnly": "napi prepublish -t npm && bun run build"
+    "artifacts": "napi artifacts"
   },
   "devDependencies": {
     "@napi-rs/cli": "^3.2.0",
     "oxlint": "^1.72.0",
     "typescript": "^6.0.0"
-  },
-  "optionalDependencies": {
-    "@xingwangzhe/force-rs-darwin-x64": "0.1.1",
-    "@xingwangzhe/force-rs-darwin-arm64": "0.1.1",
-    "@xingwangzhe/force-rs-win32-x64-msvc": "0.1.1",
-    "@xingwangzhe/force-rs-linux-x64-gnu": "0.1.1",
-    "@xingwangzhe/force-rs-linux-x64-musl": "0.1.1",
-    "@xingwangzhe/force-rs-linux-arm64-gnu": "0.1.1"
   }
 }
