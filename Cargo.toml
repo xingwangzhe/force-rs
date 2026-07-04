@@ -3,7 +3,7 @@
 authors = ["xingwangzhe"]
 edition = "2021"
 name = "force-rs"
-version = "0.1.1"
+version = "0.1.2"
 description = "Fast force-directed 3D graph layout with Barnes-Hut octree and Rayon parallelism"
 license = "MIT"
 
