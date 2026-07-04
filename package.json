@@ -1,16 +1,27 @@
 {
   "name": "@xingwangzhe/force-rs",
-  "version": "0.1.0",
-  "description": "Rust force-directed graph layout with Barnes-Hut N-body simulation",
+  "version": "0.1.1",
+  "description": "Fast force-directed 3D graph layout powered by Rust + Barnes-Hut octree. Fully compatible with d3-force-3d force model (repulsion, spring with correct degree-biased strength, translational center gravity). Parallelized with Rayon — 47K nodes × 89K edges in ~0.01s/tick on 16 cores.",
   "main": "index.js",
   "types": "index.d.ts",
-  "license": "AGPL-3.0-only",
+  "license": "MIT",
   "author": "xingwangzhe",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/xingwangzhe/force-rs.git"
   },
-  "keywords": ["force-layout", "barnes-hut", "d3-force", "napi-rs", "rust", "graph-layout"],
+  "keywords": [
+    "force-layout",
+    "barnes-hut",
+    "d3-force",
+    "d3-force-3d",
+    "napi-rs",
+    "rust",
+    "graph-layout",
+    "force-directed",
+    "3d",
+    "octree"
+  ],
   "files": [
     "index.d.ts",
     "index.js",
@@ -38,11 +49,20 @@
     "build": "napi build --platform --release",
     "test": "node --test force.test.mjs",
     "lint": "oxlint",
-    "artifacts": "napi artifacts"
+    "artifacts": "napi artifacts",
+    "prepublishOnly": "napi prepublish -t npm && bun run build"
   },
   "devDependencies": {
     "@napi-rs/cli": "^3.2.0",
     "oxlint": "^1.72.0",
     "typescript": "^6.0.0"
+  },
+  "optionalDependencies": {
+    "@xingwangzhe/force-rs-darwin-x64": "0.1.1",
+    "@xingwangzhe/force-rs-darwin-arm64": "0.1.1",
+    "@xingwangzhe/force-rs-win32-x64-msvc": "0.1.1",
+    "@xingwangzhe/force-rs-linux-x64-gnu": "0.1.1",
+    "@xingwangzhe/force-rs-linux-x64-musl": "0.1.1",
+    "@xingwangzhe/force-rs-linux-arm64-gnu": "0.1.1"
   }
 }

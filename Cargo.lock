@@ -61,14 +61,13 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "91622ff5e7162018101f2fea40d6ebf4a78bbe5a49736a2020649edf9693679e"
 
 [[package]]
-name = "force_rs"
+name = "force-rs"
 version = "0.1.0"
 dependencies = [
  "napi",
  "napi-build",
  "napi-derive",
  "rayon",
- "zhifeng_impl_barnes_hut_tree",
 ]
 
 [[package]]
@@ -328,9 +327,3 @@ name = "windows-link"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f0805222e57f7521d6a62e36fa9163bc891acd422f971defe97d64e70d0a4fe5"
-
-[[package]]
-name = "zhifeng_impl_barnes_hut_tree"
-version = "0.0.20240603"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "97899406e69bdc23027a02a1d47b0d1f4974733aa09b5afb75b85cb4335b7efd"

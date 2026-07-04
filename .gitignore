@@ -125,4 +125,12 @@ dist
 !.yarn/releases
 !.yarn/sdks
 !.yarn/versions
+
+# napi-rs generated native binaries (built by CI)
+*.node
+*.wasm
+force-rs.wasi*.js
+wasi-worker*.mjs
+
+# npm artifacts (platform sub-packages)
 /npm

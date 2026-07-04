@@ -9,10 +9,4 @@ export interface ForceOptions {
   alphaDecay: number
 }
 
-/**
- * 执行一次力导仿真 tick
- * state: [x0,y0,z0,vx0,vy0,vz0, ...] 共 n*6 个 f64，最后一位是 alpha
- * links: [src0,tgt0, ...] 共 2*m 个 u32
- * 返回: 新的 state（同格式）+ new_alpha
- */
 export declare function simTick(state: Array<number>, links: Array<number>, n: number, opts: ForceOptions): Array<number>

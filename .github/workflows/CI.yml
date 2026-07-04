@@ -161,7 +161,7 @@ jobs:
         run: ls -R .
         shell: bash
       - name: Test bindings
-        run: node --test bfs.test.mjs
+        run: node --test force.test.mjs
   test-linux-binding:
     name: Test ${{ matrix.target }} - node@${{ matrix.node }}
     needs:
@@ -219,7 +219,7 @@ jobs:
           image: ${{ steps.docker.outputs.IMAGE }}
           name: test-bindings-${{ matrix.target }}
           options: -v ${{ github.workspace }}:${{ github.workspace }} -w ${{ github.workspace }} --platform ${{ steps.docker.outputs.PLATFORM }}
-          args: node --test bfs.test.mjs
+          args: node --test force.test.mjs
   publish:
     name: Publish
     runs-on: ubuntu-latest

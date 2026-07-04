@@ -2,11 +2,26 @@
 
 # @xingwangzhe/force-rs
 
-Fast force-directed graph layout powered by Rust + Barnes-Hut N-body simulation, designed as a drop-in replacement for `d3-force-3d` in build-time pipelines.
+Fast force-directed 3D graph layout powered by **Rust + Barnes-Hut octree**, designed as a build-time replacement for `d3-force-3d`.
 
-- **16-core** parallel `simTick`: 47K nodes × 89K edges in **~0.012s/tick**
-- **Single-core** auto-fallback to sequential iteration
-- **Compatible state format**: `[x, y, z, vx, vy, vz, ...alpha]`
+### Why this exists
+
+`d3-force-3d` is excellent for interactive visualizations, but at build time (SSG/SSR) with 47K+ nodes and 89K+ edges, the JS runtime becomes a bottleneck — hundreds of ticks at ~1s each is too slow. `force-rs` implements the **exact same force model** in Rust, achieving **~0.01s/tick** on 16 cores.
+
+### Force model (fully d3-force compatible)
+
+| Force          | Implementation                                           |
+|----------------|----------------------------------------------------------|
+| Many-body repulsion | Barnes-Hut octree, O(n log n), with `√(4/k)` correction |
+| Link (spring)  | Degree-biased strength: `1/min(deg, deg)`, bias = other's degree ratio |
+| Center (translational) | Shift centroid toward origin (same as d3-force `forceCenter`) |
+| Distance softening | Smooth `√(d_min² × d²)` below 1.0 (same as d3-force) |
+
+### Other features
+
+- **16-core** parallel via [Rayon](https://github.com/rayon-rs/rayon) — auto-fallback to sequential on single-core
+- **Compatible state format**: `[x, y, z, vx, vy, vz, ...alpha]` — same as d3-force
+- Built with [NAPI-RS](https://napi.rs/) for zero-copy Node.js interop
 
 ## Installation
 
@@ -16,7 +31,7 @@ npm install @xingwangzhe/force-rs
 
 ## API
 
-### simTick(state, links, n, options)
+### `simTick(state, links, n, options)`
 
 Execute one tick of force-directed simulation.
 
@@ -24,11 +39,11 @@ Execute one tick of force-directed simulation.
 import { simTick } from '@xingwangzhe/force-rs';
 
 const opts = {
-  repulsion: 3000,      // charge force strength
-  linkDistance: 30,     // natural spring length
-  centerStrength: 0.01, // center gravity pull
+  repulsion: 3000,      // many-body charge strength
+  linkDistance: 500,    // natural spring length
+  centerStrength: 0.005,// translational center gravity
   theta: 0.8,           // Barnes-Hut approximation threshold
-  velocityDecay: 0.35,  // velocity damping per tick
+  velocityDecay: 0.60,  // velocity damping per tick
   alphaDecay: 0.02,     // cooling rate per tick
 };
 
@@ -38,46 +53,57 @@ const newState = simTick(state, links, n, opts);
 ```
 
 **ForceOptions:**
-| Field           | Type   | Description                       |
-|----------------|--------|-----------------------------------|
-| repulsion      | number | Charge force strength             |
-| linkDistance   | number | Natural spring length             |
-| centerStrength | number | Center gravity pull               |
-| theta          | number | Barnes-Hut approximation threshold|
-| velocityDecay  | number | Velocity damping per tick         |
-| alphaDecay     | number | Cooling rate per tick             |
 
-**Returns:** `Float64Array` — new state (same format as input, with updated alpha).
+| Field           | Type   | Description                            |
+|-----------------|--------|----------------------------------------|
+| `repulsion`      | number | Many-body charge strength              |
+| `linkDistance`   | number | Natural spring length                  |
+| `centerStrength` | number | Translational center gravity           |
+| `theta`          | number | Barnes-Hut approximation threshold     |
+| `velocityDecay`  | number | Velocity damping factor per tick       |
+| `alphaDecay`     | number | Alpha cooling rate per tick            |
+
+**Returns:** `Array<number>` — new state (same format as input, with updated alpha).
 
 ## Usage Example
 
 ```ts
 import { simTick } from '@xingwangzhe/force-rs';
 
-const state = new Float64Array([
-  0, 0, 0, 0, 0, 0,   // node 0 position + velocity
-  1, 1, 0, 0, 0, 0,   // node 1
-  1.0                   // alpha
-]);
-const links = new Uint32Array([0, 1]);
+// 3 nodes: positions + velocities + alpha
+const state = [
+  0, 0, 0, 0, 0, 0,    // node 0
+  100, 0, 0, 0, 0, 0,  // node 1
+  0, 100, 0, 0, 0, 0,  // node 2
+  1.0                    // alpha
+];
+const links = [0, 1, 0, 2]; // node 0 connected to 1 and 2
+
+const opts = {
+  repulsion: 3000,
+  linkDistance: 500,
+  centerStrength: 0.005,
+  theta: 0.8,
+  velocityDecay: 0.60,
+  alphaDecay: 0.02,
+};
 
 let s = state;
-const opts = { repulsion: 3000, linkDistance: 30, centerStrength: 0.01, theta: 0.8, velocityDecay: 0.35, alphaDecay: 0.02 };
-
 while (s[s.length - 1] > 0.001) {
-  s = simTick(s, links, 2, opts);
+  s = simTick(s, links, 3, opts);
 }
+// s now contains converged 3D positions
 ```
 
-## Performance
+## Real-world Performance
 
-| Platform   | 47K nodes × 89K edges | Notes                          |
-|------------|----------------------|--------------------------------|
-| 16-core    | **~0.012s/tick**     | Rayon `par_iter` across 16 threads |
-| 1-core     | ~0.15s/tick          | auto-fallback to sequential     |
+| Platform | 47K nodes × 89K edges | Notes |
+|----------|----------------------|-------|
+| 16-core  | **~0.01s/tick**      | Rayon `par_iter` across 16 threads |
+| 1-core   | ~0.15s/tick          | Auto-fallback to sequential |
 
-Built with [`zhifeng_impl_barnes_hut_tree`](https://crates.io/crates/zhifeng_impl_barnes_hut_tree) for O(n log n) repulsive force computation.
+Measured on AMD EPYC / Intel Xeon build servers. Barnes-Hut octree is custom-built in `src/lib.rs` (no external crate dependency for the tree structure).
 
 ## License
 
-MIT OR Apache-2.0
+MIT
