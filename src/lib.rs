@@ -27,14 +27,14 @@ fn sf(v: f64) -> f64 {
 }
 
 struct Oc {
-    c: [F; D],                  // center of cell
-    hw: F,                      // half-width
-    mass: F,                    // total mass (node count)
-    com: [F; D],                // center of mass (average position)
-    has: bool,                  // has exactly one particle
-    ch: [Option<Box<Oc>>; 8],   // children
-    cb: bool,                   // has been branched (has children)
-    sf: F,                      // Barnes-Hut correction factor sqrt(4/numChildren)
+    c: [F; D],                // center of cell
+    hw: F,                    // half-width
+    mass: F,                  // total mass (node count)
+    com: [F; D],              // center of mass (average position)
+    has: bool,                // has exactly one particle
+    ch: [Option<Box<Oc>>; 8], // children
+    cb: bool,                 // has been branched (has children)
+    sf: F,                    // Barnes-Hut correction factor sqrt(4/numChildren)
 }
 
 impl Oc {
