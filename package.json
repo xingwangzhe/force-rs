@@ -1,6 +1,6 @@
 {
   "name": "@xingwangzhe/force-rs",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Fast force-directed 3D graph layout powered by Rust + Barnes-Hut octree. Fully compatible with d3-force-3d force model (repulsion, spring with correct degree-biased strength, translational center gravity). Parallelized with Rayon — 47K nodes × 89K edges in ~0.01s/tick on 16 cores.",
   "main": "index.js",
   "types": "index.d.ts",
