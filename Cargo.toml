@@ -3,7 +3,7 @@
 authors = ["xingwangzhe"]
 edition = "2021"
 name = "force-rs"
-version = "0.1.6"
+version = "0.1.7"
 description = "Fast force-directed 3D graph layout with Barnes-Hut octree and Rayon parallelism"
 license = "MIT"
 
@@ -11,8 +11,8 @@ license = "MIT"
 crate-type = ["cdylib"]
 
 [dependencies]
-napi = "3.0.0"
-napi-derive = "3.0.0"
+napi = "3.12.1"
+napi-derive = "3.6.3"
 rayon = "1.12.0"
 
 [build-dependencies]
