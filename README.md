@@ -2,7 +2,7 @@
 
 # @xingwangzhe/force-rs
 
-Fast force-directed 3D graph layout powered by **Rust + Barnes-Hut octree**, designed as a build-time replacement for `d3-force-3d`.
+Fast force-directed 3D graph layout powered by **Rust + a contiguous Barnes-Hut octree**, designed as a build-time replacement for `d3-force-3d`.
 
 ### Why this exists
 
@@ -21,7 +21,7 @@ Fast force-directed 3D graph layout powered by **Rust + Barnes-Hut octree**, des
 
 - **16-core** parallel via [Rayon](https://github.com/rayon-rs/rayon) — auto-fallback to sequential on single-core
 - **Compatible state format**: `[x, y, z, vx, vy, vz, ...alpha]` — same as d3-force
-- Built with [NAPI-RS](https://napi.rs/) for zero-copy Node.js interop
+- Built with [NAPI-RS](https://napi.rs/) with a typed-array fast path
 
 ## Installation
 
@@ -52,6 +52,15 @@ const opts = {
 const newState = simTick(state, links, n, opts);
 ```
 
+For repeated ticks, preprocess links once and use typed arrays:
+
+```ts
+import { createSimulation } from '@xingwangzhe/force-rs';
+
+const simulation = createSimulation(new Uint32Array(links), n);
+const nextState = simulation.tick(new Float64Array(state), opts);
+```
+
 **ForceOptions:**
 
 | Field           | Type   | Description                            |
@@ -62,8 +71,14 @@ const newState = simTick(state, links, n, opts);
 | `theta`          | number | Barnes-Hut approximation threshold     |
 | `velocityDecay`  | number | Velocity damping factor per tick       |
 | `alphaDecay`     | number | Alpha cooling rate per tick            |
+| `algorithm`      | string | `fast` (default), `linear` experimental, or `legacy` comparison path |
+| `distanceMax`    | number | Optional finite repulsion radius |
+| `algorithm`      | string | `fast` (default) or `legacy` comparison path |
+| `distanceMax`    | number | Optional finite repulsion radius |
 
-**Returns:** `Array<number>` — new state (same format as input, with updated alpha).
+**Returns:** `Array<number>` for `simTick`, or `Float64Array` for the prepared typed-array API.
+
+The default `fast` path uses a reusable SoA state layout, precomputed CSR links, and the fastest validated tree path for the current graph size. Set `algorithm: "linear"` to benchmark the contiguous Morton-ordered octree, or `algorithm: "legacy"` when comparing with the previous pointer-based tree.
 
 ## Usage Example
 
@@ -102,7 +117,7 @@ while (s[s.length - 1] > 0.001) {
 | 16-core  | **~0.01s/tick**      | Rayon `par_iter` across 16 threads |
 | 1-core   | ~0.15s/tick          | Auto-fallback to sequential |
 
-Measured on AMD EPYC / Intel Xeon build servers. Barnes-Hut octree is custom-built in `src/lib.rs` (no external crate dependency for the tree structure).
+Measured on AMD EPYC / Intel Xeon build servers. The Barnes-Hut tree is custom-built in `src/lib.rs` (no external tree crate dependency); nodes are stored contiguously to reduce pointer chasing and allocator pressure.
 
 ## License
 

@@ -1,8 +1,13 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { simTick } from "./index.js";
+import { createSimulation, simTick } from "./index.js";
 
 const opts = { repulsion: 3000, linkDistance: 30, centerStrength: 0.01, theta: 0.8, velocityDecay: 0.35, alphaDecay: 0.02 };
+let seed = 0x12345678;
+const random = () => {
+  seed = (seed * 1664525 + 1013904223) >>> 0;
+  return seed / 0x100000000;
+};
 
 test("two repelling nodes move apart", () => {
   const state = new Float64Array([
@@ -12,8 +17,6 @@ test("two repelling nodes move apart", () => {
   ]);
   const links = Array.from([]);
   const result = simTick(Array.from(state), Array.from(links), 2, opts);
-  const x0 = result[0], y0 = result[1], z0 = result[2];
-  const x1 = result[6], y1 = result[7], z1 = result[8];
   // nodes should move apart due to repulsion
     const d0 = Math.sqrt((result[6]-result[0])**2 + (result[7]-result[1])**2 + (result[8]-result[2])**2);
   const d1 = Math.sqrt((1-0)**2*3);
@@ -90,9 +93,9 @@ test("many ticks converge", () => {
   let state = new Float64Array(10 * 6 + 1);
   for (let i = 0; i < 10; i++) {
     const b = i * 6;
-    state[b] = (Math.random() - 0.5) * 100;
-    state[b+1] = (Math.random() - 0.5) * 100;
-    state[b+2] = (Math.random() - 0.5) * 100;
+    state[b] = (random() - 0.5) * 100;
+    state[b+1] = (random() - 0.5) * 100;
+    state[b+2] = (random() - 0.5) * 100;
   }
   state[60] = 1.0;
   
@@ -119,9 +122,9 @@ test("large graph 500 nodes runs", () => {
   const state = new Float64Array(n * 6 + 1);
   for (let i = 0; i < n; i++) {
     const b = i * 6;
-    state[b] = (Math.random() - 0.5) * 100;
-    state[b+1] = (Math.random() - 0.5) * 100;
-    state[b+2] = (Math.random() - 0.5) * 100;
+    state[b] = (random() - 0.5) * 100;
+    state[b+1] = (random() - 0.5) * 100;
+    state[b+2] = (random() - 0.5) * 100;
   }
   state[n*6] = 1.0;
   const links = new Uint32Array(n * 2);
@@ -157,9 +160,9 @@ test("memory: repeated ticks don't leak", () => {
   let state = new Float64Array(100 * 6 + 1);
   for (let i = 0; i < 100; i++) {
     const b = i * 6;
-    state[b] = (Math.random() - 0.5) * 100;
-    state[b+1] = (Math.random() - 0.5) * 100;
-    state[b+2] = (Math.random() - 0.5) * 100;
+    state[b] = (random() - 0.5) * 100;
+    state[b+1] = (random() - 0.5) * 100;
+    state[b+2] = (random() - 0.5) * 100;
   }
   state[600] = 1.0;
   
@@ -217,4 +220,41 @@ test("massive repulsion clamped", () => {
   for (let i = 0; i < r.length - 1; i++) {
     assert.ok(Number.isFinite(r[i]) && Math.abs(r[i]) < 1e11, `massive repulsion r[${i}]=${r[i]}`);
   }
+});
+
+test("prepared typed-array simulation reuses link preprocessing", () => {
+  const links = new Uint32Array([0, 1, 1, 2]);
+  const simulation = createSimulation(links, 3);
+  const state = new Float64Array([
+    -10, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0,
+    10, 0, 0, 0, 0, 0,
+    1,
+  ]);
+  const result = simulation.tick(state, { ...opts, algorithm: "fast" });
+  assert.equal(result.constructor, Float64Array);
+  assert.equal(result.length, state.length);
+  for (const value of result) assert.ok(Number.isFinite(value));
+});
+
+test("legacy algorithm remains available for numerical comparisons", () => {
+  const state = [-50, 0, 0, 0, 0, 0, 50, 0, 0, 0, 0, 0, 1];
+  const links = [0, 1];
+  const fast = simTick(state, links, 2, opts);
+  const legacy = simTick(state, links, 2, { ...opts, algorithm: "legacy" });
+  assert.equal(fast.length, legacy.length);
+  for (let i = 0; i < fast.length; i++) {
+    assert.ok(Math.abs(fast[i] - legacy[i]) < 1e-9, `difference at ${i}`);
+  }
+});
+
+test("linear Morton tree is available as an explicit experimental path", () => {
+  const n = 32;
+  const state = new Float64Array(n * 6 + 1);
+  for (let i = 0; i < n; i++) state[i * 6] = i * 10 - 150;
+  state[n * 6] = 1;
+  const links = new Uint32Array([0, 1, 1, 2, 2, 3]);
+  const simulation = createSimulation(links, n);
+  const result = simulation.tick(state, { ...opts, algorithm: "linear" });
+  for (const value of result) assert.ok(Number.isFinite(value));
 });
