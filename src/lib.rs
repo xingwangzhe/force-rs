@@ -31,7 +31,7 @@ struct LinkGraph {
 impl LinkGraph {
     fn new(links: &[u32], n: usize) -> Self {
         let mut deg = vec![0u32; n];
-        for pair in links.chunks_exact(2) {
+        for pair in links.as_chunks::<2>().0 {
             let s = pair[0] as usize;
             let t = pair[1] as usize;
             if s < n && t < n {
@@ -45,7 +45,7 @@ impl LinkGraph {
         }
         let mut adj = vec![0u32; offsets[n] as usize];
         let mut cursor = offsets[..n].to_vec();
-        for pair in links.chunks_exact(2) {
+        for pair in links.as_chunks::<2>().0 {
             let s = pair[0] as usize;
             let t = pair[1] as usize;
             if s < n && t < n {
@@ -563,7 +563,12 @@ impl SimulationCore {
             out[5] = next_vz;
         };
         if rayon::current_num_threads() < 2 {
-            for (i, out) in result[..self.n * 6].chunks_exact_mut(6).enumerate() {
+            for (i, out) in result[..self.n * 6]
+                .as_chunks_mut::<6>()
+                .0
+                .iter_mut()
+                .enumerate()
+            {
                 compute(i, out);
             }
         } else {
@@ -581,7 +586,7 @@ impl SimulationCore {
             let shift_x = sx / self.n as F * opts.center_strength;
             let shift_y = sy / self.n as F * opts.center_strength;
             let shift_z = sz / self.n as F * opts.center_strength;
-            for p in result[..self.n * 6].chunks_exact_mut(6) {
+            for p in result[..self.n * 6].as_chunks_mut::<6>().0 {
                 p[0] = sf(p[0] - shift_x);
                 p[1] = sf(p[1] - shift_y);
                 p[2] = sf(p[2] - shift_z);
