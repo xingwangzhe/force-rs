@@ -258,3 +258,69 @@ test("linear Morton tree is available as an explicit experimental path", () => {
   const result = simulation.tick(state, { ...opts, algorithm: "linear" });
   for (const value of result) assert.ok(Number.isFinite(value));
 });
+
+test("legacy and linear Barnes-Hut paths agree across spatial distributions", () => {
+  const n = 192;
+  for (const distribution of ["uniform", "clustered", "skewed", "extreme"]) {
+    const state = new Float64Array(n * 6 + 1);
+    let localSeed = 0x51f15e;
+    const nextRandom = () => {
+      localSeed = (localSeed * 1664525 + 1013904223) >>> 0;
+      return localSeed / 0x100000000;
+    };
+    for (let i = 0; i < n; i++) {
+      const base = i * 6;
+      const scale = distribution === "clustered" ? 20 : distribution === "extreme" ? 1e5 : 1000;
+      const cluster = distribution === "skewed" && i >= n - 12;
+      state[base] = cluster ? 0 : (nextRandom() - 0.5) * scale;
+      state[base + 1] = cluster ? 0 : (nextRandom() - 0.5) * scale;
+      state[base + 2] = cluster ? 0 : (nextRandom() - 0.5) * scale;
+    }
+    state[n * 6] = 1;
+    const legacy = simTick(Array.from(state), [], n, { ...opts, centerStrength: 0, algorithm: "legacy" });
+    const linear = simTick(Array.from(state), [], n, { ...opts, centerStrength: 0, algorithm: "linear" });
+    for (let i = 0; i < legacy.length; i++) {
+      assert.ok(Number.isFinite(linear[i]), `${distribution}: result[${i}] must be finite`);
+      const tolerance = 1e-9 * Math.max(1, Math.abs(legacy[i]));
+      assert.ok(Math.abs(legacy[i] - linear[i]) <= tolerance, `${distribution}: mismatch at ${i}: ${legacy[i]} vs ${linear[i]}`);
+    }
+  }
+});
+
+test("zero-node and non-finite-coordinate inputs return finite state", () => {
+  const empty = simTick([1], [], 0, opts);
+  assert.deepEqual(empty, [1 - opts.alphaDecay]);
+  const state = [Infinity, NaN, -Infinity, 0, 0, 0, 1];
+  const result = simTick(state, [], 1, { ...opts, centerStrength: 0 });
+  for (const value of result) assert.ok(Number.isFinite(value));
+});
+
+test("small-theta Barnes-Hut force matches a direct pairwise reference", () => {
+  const points = [[0, 0, 0], [100, 0, 0], [0, 200, 0], [0, 0, 300], [150, 200, 250]];
+  const n = points.length;
+  const state = Array.from({ length: n * 6 + 1 }, () => 0);
+  for (let i = 0; i < n; i++) state.splice(i * 6, 3, ...points[i]);
+  state[n * 6] = 1;
+  const repulsion = 900;
+  const exact = simTick(state, [], n, {
+    ...opts,
+    repulsion,
+    centerStrength: 0,
+    theta: 1e-8,
+    velocityDecay: 1,
+    alphaDecay: 0,
+  });
+  for (let i = 0; i < n; i++) {
+    const expectedForce = [0, 0, 0];
+    for (let j = 0; j < n; j++) {
+      if (i === j) continue;
+      const delta = points[i].map((value, axis) => value - points[j][axis]);
+      const distanceSquared = delta.reduce((sum, value) => sum + value * value, 0);
+      for (let axis = 0; axis < 3; axis++) expectedForce[axis] += repulsion * delta[axis] / distanceSquared;
+    }
+    for (let axis = 0; axis < 3; axis++) {
+      assert.ok(Math.abs(exact[i * 6 + axis] - (points[i][axis] + expectedForce[axis])) < 1e-8);
+      assert.ok(Math.abs(exact[i * 6 + axis + 3] - expectedForce[axis]) < 1e-8);
+    }
+  }
+});
