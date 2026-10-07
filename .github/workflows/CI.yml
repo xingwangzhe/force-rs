@@ -2,18 +2,18 @@ name: CI
 env:
   DEBUG: napi:*
   APP_NAME: force-rs
-  MACOSX_DEPLOYMENT_TARGET: '10.13'
-  CARGO_INCREMENTAL: '1'
+  MACOSX_DEPLOYMENT_TARGET: "10.13"
+  CARGO_INCREMENTAL: "0"
 on:
   push:
     branches:
       - main
     tags-ignore:
-      - '**'
+      - "**"
     paths-ignore:
-      - '**/*.md'
+      - "**/*.md"
       - LICENSE
-      - '**/*.gitignore'
+      - "**/*.gitignore"
       - .editorconfig
       - docs/**
   pull_request:
@@ -51,27 +51,26 @@ jobs:
       fail-fast: false
       matrix:
         settings:
-          - host: macos-latest
+          - host: macos-15-intel
             target: x86_64-apple-darwin
-            build: bun run build --target x86_64-apple-darwin
+            build: bun run build:pgo --select --target x86_64-apple-darwin
           - host: macos-latest
             target: aarch64-apple-darwin
-            build: bun run build --target aarch64-apple-darwin
+            build: bun run build:pgo --select --target aarch64-apple-darwin
           - host: windows-latest
-            build: bun run build --target x86_64-pc-windows-msvc
+            build: bun run build:pgo --select --target x86_64-pc-windows-msvc
             target: x86_64-pc-windows-msvc
           - host: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-            build: bun run build --target x86_64-unknown-linux-gnu --use-napi-cross
+            build: bun run build:pgo --select --target x86_64-unknown-linux-gnu --use-napi-cross
           - host: ubuntu-latest
             target: x86_64-unknown-linux-musl
-            build: bun run build --target x86_64-unknown-linux-musl -x
-          - host: ubuntu-latest
+            build: bun run build:pgo --select --target x86_64-unknown-linux-musl -x
+          - host: ubuntu-24.04-arm
             target: aarch64-unknown-linux-gnu
-            build: bun run build --target aarch64-unknown-linux-gnu --use-napi-cross
+            build: bun run build:pgo --select --target aarch64-unknown-linux-gnu --use-napi-cross
     name: stable - ${{ matrix.settings.target }} - node@24
     runs-on: ${{ matrix.settings.host }}
-    continue-on-error: ${{ contains(matrix.settings.target, 'musl') }}
     steps:
       - uses: actions/checkout@v7.0.1
       - uses: oven-sh/setup-bun@v2.2.0
@@ -86,6 +85,7 @@ jobs:
         with:
           toolchain: stable
           targets: ${{ matrix.settings.target }}
+          components: llvm-tools-preview
       - name: Cache cargo
         uses: actions/cache@v6.1.0
         with:
@@ -108,15 +108,19 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         with:
           tool: cargo-zigbuild
-      - name: Setup toolchain
-        run: ${{ matrix.settings.setup }}
-        if: ${{ matrix.settings.setup }}
-        shell: bash
       - name: Install dependencies
         run: bun install
       - name: Build
         run: ${{ matrix.settings.build }}
         shell: bash
+      - name: Upload PGO build record
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: pgo-${{ matrix.settings.target }}
+          path: |
+            target/pgo/${{ matrix.settings.target }}/build.json
+            target/pgo/${{ matrix.settings.target }}/benchmark.json
+          if-no-files-found: error
       - name: Upload artifact
         uses: actions/upload-artifact@v7.0.1
         with:
@@ -138,8 +142,8 @@ jobs:
           - host: windows-latest
             target: x86_64-pc-windows-msvc
         node:
-          - '24'
-          - '26'
+          - "24"
+          - "26"
     runs-on: ${{ matrix.settings.host }}
     steps:
       - uses: actions/checkout@v7.0.1
@@ -174,8 +178,8 @@ jobs:
           - x86_64-unknown-linux-musl
           - aarch64-unknown-linux-gnu
         node:
-          - '24'
-          - '26'
+          - "24"
+          - "26"
     runs-on: ${{ contains(matrix.target, 'aarch64') && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
     steps:
       - uses: actions/checkout@v7.0.1
@@ -236,15 +240,22 @@ jobs:
           node-version: 24
       - name: Install dependencies
         run: bun install
-      - name: Build native binding
-        run: bun run build
+      - name: Install Rust and matching LLVM tools
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: llvm-tools-preview
+      - name: Compare release and PGO runtime
+        run: bun run benchmark:pgo
       - name: Run benchmark
         run: bun run benchmark > benchmark.json
       - name: Upload benchmark
         uses: actions/upload-artifact@v7.0.1
         with:
           name: force-rs-benchmark
-          path: benchmark.json
+          path: |
+            benchmark.json
+            target/pgo/*/benchmark.json
+            target/pgo/*/build.json
   publish:
     name: Publish
     runs-on: ubuntu-latest

@@ -10,12 +10,12 @@ Fast force-directed 3D graph layout powered by **Rust + a contiguous Barnes-Hut 
 
 ### Force model (fully d3-force compatible)
 
-| Force          | Implementation                                           |
-|----------------|----------------------------------------------------------|
-| Many-body repulsion | Barnes-Hut octree, O(n log n), with `√(4/k)` correction |
-| Link (spring)  | Degree-biased strength: `1/min(deg, deg)`, bias = other's degree ratio |
-| Center (translational) | Shift centroid toward origin (same as d3-force `forceCenter`) |
-| Distance softening | Smooth `√(d_min² × d²)` below 1.0 (same as d3-force) |
+| Force                  | Implementation                                                         |
+| ---------------------- | ---------------------------------------------------------------------- |
+| Many-body repulsion    | Barnes-Hut octree, O(n log n), with `√(4/k)` correction                |
+| Link (spring)          | Degree-biased strength: `1/min(deg, deg)`, bias = other's degree ratio |
+| Center (translational) | Shift centroid toward origin (same as d3-force `forceCenter`)          |
+| Distance softening     | Smooth `√(d_min² × d²)` below 1.0 (same as d3-force)                   |
 
 ### Other features
 
@@ -36,15 +36,15 @@ npm install @xingwangzhe/force-rs
 Execute one tick of force-directed simulation.
 
 ```ts
-import { simTick } from '@xingwangzhe/force-rs';
+import { simTick } from "@xingwangzhe/force-rs";
 
 const opts = {
-  repulsion: 3000,      // many-body charge strength
-  linkDistance: 500,    // natural spring length
-  centerStrength: 0.005,// translational center gravity
-  theta: 0.8,           // Barnes-Hut approximation threshold
-  velocityDecay: 0.60,  // velocity damping per tick
-  alphaDecay: 0.02,     // cooling rate per tick
+  repulsion: 3000, // many-body charge strength
+  linkDistance: 500, // natural spring length
+  centerStrength: 0.005, // translational center gravity
+  theta: 0.8, // Barnes-Hut approximation threshold
+  velocityDecay: 0.6, // velocity damping per tick
+  alphaDecay: 0.02, // cooling rate per tick
 };
 
 // state: n*6 + 1 floats [x0,y0,z0,vx0,vy0,vz0, ..., alpha]
@@ -55,7 +55,7 @@ const newState = simTick(state, links, n, opts);
 For repeated ticks, preprocess links once and use typed arrays:
 
 ```ts
-import { createSimulation } from '@xingwangzhe/force-rs';
+import { createSimulation } from "@xingwangzhe/force-rs";
 
 const simulation = createSimulation(new Uint32Array(links), n);
 const nextState = simulation.tick(new Float64Array(state), opts);
@@ -63,18 +63,18 @@ const nextState = simulation.tick(new Float64Array(state), opts);
 
 **ForceOptions:**
 
-| Field           | Type   | Description                            |
-|-----------------|--------|----------------------------------------|
-| `repulsion`      | number | Many-body charge strength              |
-| `linkDistance`   | number | Natural spring length                  |
-| `centerStrength` | number | Translational center gravity           |
-| `theta`          | number | Barnes-Hut approximation threshold     |
-| `velocityDecay`  | number | Velocity damping factor per tick       |
-| `alphaDecay`     | number | Alpha cooling rate per tick            |
+| Field            | Type   | Description                                                          |
+| ---------------- | ------ | -------------------------------------------------------------------- |
+| `repulsion`      | number | Many-body charge strength                                            |
+| `linkDistance`   | number | Natural spring length                                                |
+| `centerStrength` | number | Translational center gravity                                         |
+| `theta`          | number | Barnes-Hut approximation threshold                                   |
+| `velocityDecay`  | number | Velocity damping factor per tick                                     |
+| `alphaDecay`     | number | Alpha cooling rate per tick                                          |
 | `algorithm`      | string | `fast` (default), `linear` experimental, or `legacy` comparison path |
-| `distanceMax`    | number | Optional finite repulsion radius |
-| `algorithm`      | string | `fast` (default) or `legacy` comparison path |
-| `distanceMax`    | number | Optional finite repulsion radius |
+| `distanceMax`    | number | Optional finite repulsion radius                                     |
+| `algorithm`      | string | `fast` (default) or `legacy` comparison path                         |
+| `distanceMax`    | number | Optional finite repulsion radius                                     |
 
 **Returns:** `Array<number>` for `simTick`, or `Float64Array` for the prepared typed-array API.
 
@@ -83,14 +83,29 @@ The default `fast` path uses a reusable SoA state layout, precomputed CSR links,
 ## Usage Example
 
 ```ts
-import { simTick } from '@xingwangzhe/force-rs';
+import { simTick } from "@xingwangzhe/force-rs";
 
 // 3 nodes: positions + velocities + alpha
 const state = [
-  0, 0, 0, 0, 0, 0,    // node 0
-  100, 0, 0, 0, 0, 0,  // node 1
-  0, 100, 0, 0, 0, 0,  // node 2
-  1.0                    // alpha
+  0,
+  0,
+  0,
+  0,
+  0,
+  0, // node 0
+  100,
+  0,
+  0,
+  0,
+  0,
+  0, // node 1
+  0,
+  100,
+  0,
+  0,
+  0,
+  0, // node 2
+  1.0, // alpha
 ];
 const links = [0, 1, 0, 2]; // node 0 connected to 1 and 2
 
@@ -99,7 +114,7 @@ const opts = {
   linkDistance: 500,
   centerStrength: 0.005,
   theta: 0.8,
-  velocityDecay: 0.60,
+  velocityDecay: 0.6,
   alphaDecay: 0.02,
 };
 
@@ -112,13 +127,17 @@ while (s[s.length - 1] > 0.001) {
 
 ## Real-world Performance
 
-| Platform | 47K nodes × 89K edges | Notes |
-|----------|----------------------|-------|
-| 16-core  | **~0.01s/tick**      | Rayon `par_iter` across 16 threads |
-| 1-core   | ~0.15s/tick          | Auto-fallback to sequential |
+| Platform | 47K nodes × 89K edges | Notes                              |
+| -------- | --------------------- | ---------------------------------- |
+| 16-core  | **~0.01s/tick**       | Rayon `par_iter` across 16 threads |
+| 1-core   | ~0.15s/tick           | Auto-fallback to sequential        |
 
 Measured on AMD EPYC / Intel Xeon build servers. The Barnes-Hut tree is custom-built in `src/lib.rs` (no external tree crate dependency); nodes are stored contiguously to reduce pointer chasing and allocator pressure.
 
 ## License
 
 MIT
+
+## Runtime-focused release builds
+
+Native CI artifacts use full LTO, one code-generation unit, and O3, while preserving the existing CPU instruction baseline. CI trains a profile-guided optimization (PGO) candidate using representative graph workloads and publishes it only when the runtime comparison passes; otherwise it publishes the unprofiled release. `bun run build:pgo` produces the optimized addon; `bun run benchmark:pgo` compares it with an unprofiled release. Install `llvm-tools-preview` with the same Rust toolchain first. Details and measurement limits: [scripts/PERFORMANCE.md](scripts/PERFORMANCE.md).

@@ -2,31 +2,45 @@
   "name": "@xingwangzhe/force-rs",
   "version": "0.2.2",
   "description": "Fast force-directed 3D graph layout powered by Rust + Barnes-Hut octree. Fully compatible with d3-force-3d force model (repulsion, spring with correct degree-biased strength, translational center gravity). Parallelized with Rayon — 47K nodes × 89K edges in ~0.01s/tick on 16 cores.",
-  "main": "index.js",
-  "types": "index.d.ts",
+  "keywords": [
+    "3d",
+    "barnes-hut",
+    "d3-force",
+    "d3-force-3d",
+    "force-directed",
+    "force-layout",
+    "graph-layout",
+    "napi-rs",
+    "octree",
+    "rust"
+  ],
   "license": "MIT",
   "author": "xingwangzhe",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/xingwangzhe/force-rs.git"
   },
-  "keywords": [
-    "force-layout",
-    "barnes-hut",
-    "d3-force",
-    "d3-force-3d",
-    "napi-rs",
-    "rust",
-    "graph-layout",
-    "force-directed",
-    "3d",
-    "octree"
-  ],
   "files": [
     "index.d.ts",
     "index.js",
     "force-rs.*.node"
   ],
+  "main": "index.js",
+  "types": "index.d.ts",
+  "scripts": {
+    "build": "napi build --platform --release",
+    "test": "node --test force.test.mjs",
+    "benchmark": "node benchmark.mjs",
+    "lint": "oxlint",
+    "artifacts": "napi artifacts",
+    "build:pgo": "node scripts/build-pgo.mjs",
+    "benchmark:pgo": "node scripts/build-pgo.mjs --compare"
+  },
+  "devDependencies": {
+    "@napi-rs/cli": "^3.10.5",
+    "oxlint": "^1.85.0",
+    "typescript": "^7.0.2"
+  },
   "napi": {
     "binaryName": "force-rs",
     "targets": [
@@ -40,17 +54,5 @@
   },
   "engines": {
     "node": ">= 18"
-  },
-  "scripts": {
-    "build": "napi build --platform --release",
-    "test": "node --test force.test.mjs",
-    "benchmark": "node benchmark.mjs",
-    "lint": "oxlint",
-    "artifacts": "napi artifacts"
-  },
-  "devDependencies": {
-    "@napi-rs/cli": "^3.10.5",
-    "oxlint": "^1.85.0",
-    "typescript": "^7.0.2"
   }
 }
