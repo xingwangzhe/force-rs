@@ -324,3 +324,128 @@ test("small-theta Barnes-Hut force matches a direct pairwise reference", () => {
     }
   }
 });
+
+test("stackless arena preserves legacy forces across adversarial trees", () => {
+  for (const shape of ["uniform", "clustered", "coincident", "outside-root"]) {
+    const n = shape === "uniform" ? 4097 : 137;
+    let localSeed = 0x71c0ffee;
+    const next = () => {
+      localSeed = (Math.imul(localSeed, 1664525) + 1013904223) >>> 0;
+      return localSeed / 0x100000000;
+    };
+    let fast = new Float64Array(n * 6 + 1);
+    for (let i = 0; i < n; i++) {
+      for (let axis = 0; axis < 3; axis++) {
+        const scale = shape === "clustered" ? 0.005 : shape === "outside-root" ? 1e9 : 3000;
+        fast[i * 6 + axis] = shape === "coincident" ? 0 : (next() - 0.5) * scale;
+        fast[i * 6 + axis + 3] = (next() - 0.5) * 5;
+      }
+    }
+    fast[n * 6] = 1;
+    let legacy = new Float64Array(fast);
+    // Includes duplicate links, self-links, and invalid endpoints.
+    const links = new Uint32Array(n * 8);
+    for (let i = 0; i < links.length; i++) links[i] = Math.floor(next() * (n + 2));
+    const a = createSimulation(links, n);
+    const b = createSimulation(links, n);
+    // Disable centroid reduction: parallel reduction order can differ between
+    // executions, independently of the per-node force algorithm.
+    const options = { ...opts, centerStrength: 0, distanceMax: shape === "uniform" ? 2000 : undefined };
+    for (let tick = 0; tick < 4; tick++) {
+      fast = a.tick(fast, { ...options, algorithm: "fast" });
+      legacy = b.tick(legacy, { ...options, algorithm: "legacy" });
+      assert.deepEqual(fast, legacy, `${shape}, tick ${tick}`);
+    }
+  }
+});
+
+test("prepared simulation refreshes reused scratch from the supplied state", () => {
+  const links = new Uint32Array([0, 1, 1, 2]);
+  const simulation = createSimulation(links, 3);
+  const first = new Float64Array([-10, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 10, 0, 0, 0, 0, 1, 1]);
+  const second = new Float64Array(first);
+  second[0] = 123;
+  simulation.tick(first, opts);
+  assert.deepEqual(simulation.tick(second, opts), createSimulation(links, 3).tick(second, opts));
+  assert.equal(first[0], -10, "input state is not mutated");
+});
+
+test("Morton evaluation order preserves per-node arithmetic and public node order", () => {
+  const n = 4097;
+  let seed = 0x4512aaef;
+  const next = () => {
+    seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+    return seed / 0x100000000;
+  };
+  let ordinary = new Float64Array(n * 6 + 1);
+  for (let i = 0; i < n; i++) {
+    for (let axis = 0; axis < 3; axis++) ordinary[i * 6 + axis] = (next() - 0.5) * 10000;
+  }
+  ordinary[n * 6] = 1;
+  let ordered = new Float64Array(ordinary);
+  const links = new Uint32Array(n * 6);
+  for (let i = 0; i < links.length; i++) links[i] = Math.floor(next() * n);
+  const a = createSimulation(links, n);
+  const b = createSimulation(links, n);
+  const options = { ...opts, centerStrength: 0 };
+  for (let tick = 0; tick < 3; tick++) {
+    ordinary = a.tick(ordinary, { ...options, algorithm: "fast" });
+    ordered = b.tick(ordered, { ...options, algorithm: "ordered" });
+    assert.deepEqual(ordered, ordinary, `tick ${tick}`);
+  }
+});
+
+test("batched simulation matches individual ticks and the exact cooling stop", () => {
+  const n = 17;
+  const initial = new Float64Array(n * 6 + 1);
+  const links = new Uint32Array(n * 2);
+  for (let i = 0; i < n; i++) {
+    initial[i * 6] = Math.sin(i) * 500;
+    initial[i * 6 + 1] = Math.cos(i) * 500;
+    initial[i * 6 + 2] = i * 10;
+    links[i * 2] = i;
+    links[i * 2 + 1] = (i + 1) % n;
+  }
+  initial[n * 6] = 1;
+  const options = { ...opts, centerStrength: 0 };
+  const individual = createSimulation(links, n);
+  let expected = new Float64Array(initial);
+  let ticks = 0;
+  do {
+    expected = individual.tick(expected, options);
+    ticks++;
+  } while (expected[n * 6] >= 0.001 && ticks < 500);
+  const simulation = createSimulation(links, n);
+  const result = simulation.run(initial, options, 500, 0.001);
+  assert.equal(result.ticks, ticks);
+  assert.equal(result.ticks, 342);
+  assert.deepEqual(result.state, expected);
+  assert.equal(initial[n * 6], 1, "batch does not mutate the input");
+  const zero = simulation.run(initial, options, 0, 0.001);
+  assert.equal(zero.ticks, 0);
+  assert.deepEqual(zero.state, initial);
+});
+
+test("split batches preserve public tick state", () => {
+  const initial = new Float64Array([-10, 0, 0, 0, 0, 0, 10, 0, 0, 0, 0, 0, 1]);
+  const links = new Uint32Array([0, 1]);
+  const options = { ...opts, centerStrength: 0 };
+  const a = createSimulation(links, 2);
+  const b = createSimulation(links, 2);
+  const first = a.run(initial, options, 7, 0);
+  const split = a.run(first.state, options, 13, 0);
+  const single = b.run(initial, options, 20, 0);
+  assert.equal(first.ticks + split.ticks, single.ticks);
+  assert.deepEqual(split.state, single.state);
+});
+
+test("batch reports a time cutoff separately from cooling completion", () => {
+  const initial = new Float64Array([-10, 0, 0, 0, 0, 0, 10, 0, 0, 0, 0, 0, 1]);
+  const simulation = createSimulation(new Uint32Array([0, 1]), 2);
+  const limited = simulation.run(initial, opts, 100, 0, 0);
+  assert.equal(limited.ticks, 1);
+  assert.equal(limited.stoppedByTime, true);
+  const converged = simulation.run(initial, opts, 100, 2, 0);
+  assert.equal(converged.ticks, 1);
+  assert.equal(converged.stoppedByTime, false, "cooling completes before checking time limit");
+});

@@ -11,6 +11,11 @@ export declare const __napiBindingTarget: 'native' | 'wasm32-wasi' | 'wasm32-was
 
 export declare class Simulation {
   tick(state: Float64Array, opts: ForceOptions): Float64Array
+  /**
+   * Run a bounded batch without exposing intermediate arrays to the JS heap.
+   * Stops after the same completed tick that repeated `tick` calls would stop.
+   */
+  run(state: Float64Array, opts: ForceOptions, maxTicks: number, alphaMin: number, timeLimitMs?: number | undefined | null): SimulationResult
 }
 
 export declare function createSimulation(links: Uint32Array, n: number): Simulation
@@ -27,3 +32,9 @@ export interface ForceOptions {
 }
 
 export declare function simTick(state: Array<number>, links: Array<number>, n: number, opts: ForceOptions): Array<number>
+
+export interface SimulationResult {
+  state: Float64Array
+  ticks: number
+  stoppedByTime: boolean
+}

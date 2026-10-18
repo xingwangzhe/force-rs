@@ -1,0 +1,30 @@
+[
+  {
+    "variant": "individual",
+    "valuesChecked": 294385,
+    "maxAbsDifference": 5.093170329928398e-11,
+    "rmsDifference": 2.4387056157000622e-12,
+    "differingValues": 171099
+  },
+  {
+    "variant": "batch10-run1",
+    "valuesChecked": 294385,
+    "maxAbsDifference": 3.637978807091713e-11,
+    "rmsDifference": 2.0650575246403443e-12,
+    "differingValues": 161610
+  },
+  {
+    "variant": "batch10-run2",
+    "valuesChecked": 294385,
+    "maxAbsDifference": 1.6007106751203537e-10,
+    "rmsDifference": 3.639236403014216e-12,
+    "differingValues": 208749
+  },
+  {
+    "variant": "batch342",
+    "valuesChecked": 294385,
+    "maxAbsDifference": 6.548361852765083e-11,
+    "rmsDifference": 3.030853892166694e-12,
+    "differingValues": 186140
+  }
+]

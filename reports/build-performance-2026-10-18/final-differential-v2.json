@@ -1,0 +1,20 @@
+[
+  {
+    "variant": "published",
+    "maxAbsDifference": 0.0,
+    "rmsDifference": 0.0,
+    "differingValues": 0
+  },
+  {
+    "variant": "arena-v2",
+    "maxAbsDifference": 4.3655745685100555e-11,
+    "rmsDifference": 1.5629339241455846e-12,
+    "differingValues": 136464
+  },
+  {
+    "variant": "ordered-v2",
+    "maxAbsDifference": 7.275957614183426e-11,
+    "rmsDifference": 2.5419715024450106e-12,
+    "differingValues": 178118
+  }
+]

@@ -6,9 +6,9 @@ Fast force-directed 3D graph layout powered by **Rust + a contiguous Barnes-Hut 
 
 ### Why this exists
 
-`d3-force-3d` is excellent for interactive visualizations, but at build time (SSG/SSR) with 47K+ nodes and 89K+ edges, the JS runtime becomes a bottleneck — hundreds of ticks at ~1s each is too slow. `force-rs` implements the **exact same force model** in Rust, achieving **~0.01s/tick** on 16 cores.
+`d3-force-3d` is excellent for interactive visualizations, but at build time (SSG/SSR) with 47K+ nodes and 89K+ edges, the JS runtime becomes a bottleneck — hundreds of ticks at ~1s each is too slow. `force-rs` implements d3-style repulsion, degree-biased springs and translational centering in Rust. Runtime depends on graph geometry, force options, hardware and thread count; measured consumer results are documented below.
 
-### Force model (fully d3-force compatible)
+### Force model
 
 | Force                  | Implementation                                                         |
 | ---------------------- | ---------------------------------------------------------------------- |
@@ -71,14 +71,28 @@ const nextState = simulation.tick(new Float64Array(state), opts);
 | `theta`          | number | Barnes-Hut approximation threshold                                   |
 | `velocityDecay`  | number | Velocity damping factor per tick                                     |
 | `alphaDecay`     | number | Alpha cooling rate per tick                                          |
-| `algorithm`      | string | `fast` (default), `linear` experimental, or `legacy` comparison path |
-| `distanceMax`    | number | Optional finite repulsion radius                                     |
-| `algorithm`      | string | `fast` (default) or `legacy` comparison path                         |
+| `algorithm`      | string | `fast` (default), experimental `ordered` / `linear`, or `legacy` reference |
 | `distanceMax`    | number | Optional finite repulsion radius                                     |
 
 **Returns:** `Array<number>` for `simTick`, or `Float64Array` for the prepared typed-array API.
 
-The default `fast` path uses a reusable SoA state layout, precomputed CSR links, and the fastest validated tree path for the current graph size. Set `algorithm: "linear"` to benchmark the contiguous Morton-ordered octree, or `algorithm: "legacy"` when comparing with the previous pointer-based tree.
+The default `fast` path reuses SoA state, precomputed CSR spring coefficients and a contiguous octree with stackless preorder traversal. It preserves the original insertion order and force contribution order. Experimental `ordered` evaluates independent nodes in Morton order and restores the public node order; `linear` changes tree insertion order. Use `legacy` to compare with the previous pointer-based tree. Parallel centroid reductions may produce ordinary floating-point roundoff differences.
+
+### Bounded batched simulation
+
+```ts
+const result = simulation.run(new Float64Array(state), opts, 500, 0.001, 14 * 60 * 1000);
+// result.state: Float64Array; result.ticks: number; result.stoppedByTime: boolean
+```
+
+`run` performs at most `maxTicks` ticks, checks `alpha < alphaMin` after every
+completed tick, and optionally stops when `timeLimitMs` has elapsed. It returns
+the exact completed tick count and reports a time cutoff separately from cooling
+completion. A zero tick limit returns a copy of the input. Inputs are not mutated.
+Two native result buffers are reused throughout the batch, so intermediate states
+do not each become a JS external typed array. Use smaller batches for progress
+reporting or cancellation between calls. A time cutoff is an incomplete layout;
+the consumer decides whether it can be used or cached.
 
 ## Usage Example
 
@@ -127,12 +141,35 @@ while (s[s.length - 1] > 0.001) {
 
 ## Real-world Performance
 
-| Platform | 47K nodes × 89K edges | Notes                              |
-| -------- | --------------------- | ---------------------------------- |
-| 16-core  | **~0.01s/tick**       | Rayon `par_iter` across 16 threads |
-| 1-core   | ~0.15s/tick           | Auto-fallback to sequential        |
+A 2026-10-18 cross-repository test used the real FriendLinks graph: **49,064 nodes,
+107,527 edges, 342 cooling ticks**, identical options and initial state, portable
+release builds, and 16 Rayon threads on an Intel Core i7-1260P.
 
-Measured on AMD EPYC / Intel Xeon build servers. The Barnes-Hut tree is custom-built in `src/lib.rs` (no external tree crate dependency); nodes are stored contiguously to reduce pointer chasing and allocator pressure.
+| Implementation / call mode | Complete 342 ticks | Process peak RSS |
+| --- | --- | --- |
+| Published 0.2.3 | 42.99 s | Not recorded in the standalone control |
+| 0.3 candidate, individual `tick` calls | 21.07 s | 840.8 MiB |
+| 0.3 candidate, batches of 10, two independent runs | 23.02 / 21.61 s | 156.1 / 156.1 MiB |
+| 0.3 candidate, one batch of 342 | 22.94 s | 76.9 MiB |
+
+These are complete isolated native-run measurements, not universal throughput
+guarantees. The arena and stackless traversal provide the CPU improvement;
+batching reduces intermediate JS arrays and peak RSS. The batch-of-10 peak RSS
+was 81.4% lower than individual calls in this runner, while CPU times do not show
+a batching speedup. Small differences between call modes are sensitive to CPU
+scheduling and temperature.
+
+All coordinates remained finite, final alpha and graph geometry summary metrics
+matched the published control. The graph, cooling count, theta and force law were
+unchanged. Experimental Morton evaluation order had a modest exploratory gain
+and remains opt-in. A coherent packet prototype was slower and removed. Local
+PGO improved the balanced corpus geometric mean by only 1.1%, below the existing
+3% selection threshold, so the unprofiled release was selected on this machine.
+
+The tree remains specialized code in `src/lib.rs`, with no external numerical
+tree crate. See [raw measurements and reproduction](reports/build-performance-2026-10-18/README.md),
+[algorithm and crate research](scripts/ALGORITHM-RESEARCH.md), and the consumer
+fixture runner `scripts/real-graph-benchmark.mjs`.
 
 ## License
 

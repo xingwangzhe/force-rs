@@ -6,9 +6,9 @@
 
 ### 为什么需要这个包
 
-`d3-force-3d` 在交互式可视化中表现优异，但在构建期（SSG/SSR）处理 47K+ 节点、89K+ 边时，JS 运行时成为瓶颈 — 数百个 tick、每个约 1s 太慢了。`force-rs` 用 Rust 实现了**完全相同的力模型**，在 16 核上仅需 **~0.01s/tick**。
+`d3-force-3d` 在交互式可视化中表现优异，但在构建期（SSG/SSR）处理 47K+ 节点、89K+ 边时，JS 运行时成为瓶颈 — 数百个 tick、每个约 1s 太慢了。`force-rs` 用 Rust 实现基于 d3 的斥力、度数偏置弹簧力和质心平移。实际耗时取决于图形分布、参数、硬件与线程数；下方提供真实消费项目的完整测量。
 
-### 力模型（完全兼容 d3-force）
+### 力模型
 
 | 力                   | 实现方式                                                   |
 | -------------------- | ---------------------------------------------------------- |
@@ -71,12 +71,25 @@ const nextState = simulation.tick(new Float64Array(state), opts);
 | `theta`          | number | Barnes-Hut 近似阈值                                     |
 | `velocityDecay`  | number | 速度衰减系数                                            |
 | `alphaDecay`     | number | 降温速率                                                |
-| `algorithm`      | string | 默认 `fast`，可选实验性的 `linear` 或 `legacy` 对照路径 |
+| `algorithm`      | string | 默认 `fast`，可选实验性的 `ordered` / `linear` 或 `legacy` 对照路径 |
 | `distanceMax`    | number | 可选的有限斥力半径                                      |
 
 **返回:** `simTick` 返回 `Array<number>`；prepared typed-array API 返回 `Float64Array`。
 
-默认 `fast` 路径使用 SoA 状态布局、预计算 CSR links，以及针对当前图规模验证过的最快树路径。设置 `algorithm: "linear"` 可压测连续内存 Morton 八叉树；需要与旧实现对照时可设置 `algorithm: "legacy"`。
+默认 `fast` 复用 SoA 状态、CSR 弹簧系数和连续内存八叉树，并使用无栈前序遍历；保留原始插入顺序和每个节点的力求和顺序。实验性的 `ordered` 仅按 Morton 顺序计算独立节点，再恢复公开节点顺序；`linear` 会改变树的插入顺序。`legacy` 保留旧指针树用于数值对照。并行质心归约仍可能产生浮点舍入差异。
+
+### 有界批量仿真
+
+```ts
+const result = simulation.run(new Float64Array(state), opts, 500, 0.001, 14 * 60 * 1000);
+// result.state: Float64Array；result.ticks: number；result.stoppedByTime: boolean
+```
+
+`run` 最多执行 `maxTicks` 次，每次完成 tick 后检查 `alpha < alphaMin`，
+并可选地在 `timeLimitMs` 毫秒后停止。返回实际完成次数，并区分冷却完成与时间截断。
+次数为零时返回输入副本，不修改输入数组。批次内部复用两个原生结果缓冲，避免为每个
+中间状态创建 JS 外部数组。需要进度或取消时可分批调用；时间截断属于不完整布局，
+消费方应自行决定是否使用或缓存。
 
 ## 使用示例
 
@@ -125,12 +138,29 @@ while (s[s.length - 1] > 0.001) {
 
 ## 实测性能
 
-| 平台  | 47K 节点 × 89K 边 | 说明                         |
-| ----- | ----------------- | ---------------------------- |
-| 16 核 | **~0.01s/tick**   | Rayon `par_iter` 16 线程并行 |
-| 1 核  | ~0.15s/tick       | 自动降级串行                 |
+2026-10-18 使用真实 FriendLinks 图：**49,064 节点、107,527 边、342 个冷却 tick**。
+初始状态与所有力参数相同；Intel Core i7-1260P、16 个 Rayon 线程、可移植发布构建。
 
-在 AMD EPYC / Intel Xeon 构建服务器上实测。Barnes-Hut 八叉树为 `src/lib.rs` 中自实现（无外部树结构 crate 依赖），节点连续存储以降低指针追踪和分配器压力。
+| 实现 / 调用方式 | 完整 342 tick | 进程峰值 RSS |
+| --- | --- | --- |
+| 已发布的 0.2.3 | 42.99 秒 | 独立基线未记录 |
+| 0.3 候选，逐次 `tick` | 21.07 秒 | 840.8 MiB |
+| 0.3 候选，每批 10 次，两个独立进程 | 23.02 / 21.61 秒 | 156.1 / 156.1 MiB |
+| 0.3 候选，单批 342 次 | 22.94 秒 | 76.9 MiB |
+
+以上为隔离运行的完整原生测量，不能视为所有硬件与输入的吞吐保证。arena 与无栈遍历
+降低 CPU 计算成本；批处理减少中间 JS 外部数组，10 次一批的峰值 RSS 在此入口降低
+81.4%。CPU 时间没有证明批处理更快；小幅差异容易受调度与温度影响。
+
+全部坐标有限，最终 alpha 与图形几何摘要一致。没有减少 tick、增大 theta 或修改力
+模型。Morton 计算顺序仅有有限的探索性收益，保留为显式实验选项；四查询共享遍历
+原型实测更慢，已移除。本机 PGO 在平衡语料上的几何平均收益仅 1.1%，未达到已有
+3% 选择阈值，因此选择无 PGO 的发布构建。
+
+树实现仍位于 `src/lib.rs`，不依赖外部数值树库。详见
+[原始测量与复现方法](reports/build-performance-2026-10-18/README.md)、
+[算法与 crates 调研](scripts/ALGORITHM-RESEARCH.md)，真实 fixture 压测入口为
+`scripts/real-graph-benchmark.mjs`。
 
 ## 协议
 

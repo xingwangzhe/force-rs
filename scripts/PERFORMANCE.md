@@ -15,3 +15,11 @@ The `scripts/pgo-workload.mjs` corpus should be updated alongside APIs or repres
 CI uses `bun run build:pgo --select`: it also builds the unprofiled release and measures both variants on each target. After two discarded warmup processes, it selects PGO only when the balanced workload geometric mean is at least 3% faster and no non-trivial workload (baseline at least 20 microseconds) regresses by more than 15%. Otherwise it publishes the unprofiled binary. This conservative sample-based selection is not a proof about all workloads; the per-target `build.json` records the selected variant and the comparison is uploaded as `benchmark.json`. The instrumented binary is never selected for publication.
 
 Linux Zig builds use a small compiler-driver shim to forward rustc's PGO `-u SYMBOL` linker arguments as `-Wl,-u,SYMBOL`. All other arguments are preserved. This does not replace the Zig sysroot or alter the glibc baseline. The shim requires Python 3 (available on the CI Linux runners).
+
+The 0.3 training and comparison corpus includes uniform, clustered, skewed,
+extreme-coordinate, and medium-size phyllotaxis layouts. Phyllotaxis inputs use
+the consumer-style force parameters at 8,192 nodes for training and 10,240 nodes
+for measurement, with different deterministic seeds. The `fast`, experimental
+`linear` and experimental `ordered` paths are covered, along with bounded batch
+and time-cutoff APIs. The actual 49,064-node FriendLinks fixture remains a
+separate holdout and is not embedded in the package or PGO training corpus.
