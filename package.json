@@ -1,6 +1,6 @@
 {
   "name": "@xingwangzhe/force-rs",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Fast force-directed 3D graph layout powered by Rust, a stackless Barnes-Hut octree, reusable CSR links and Rayon parallelism. Typed-array tick and bounded batched simulation APIs.",
   "keywords": [
     "3d",
@@ -37,8 +37,8 @@
     "benchmark:pgo": "node scripts/build-pgo.mjs --compare"
   },
   "devDependencies": {
-    "@napi-rs/cli": "^3.10.8",
-    "oxlint": "^1.88.0",
+    "@napi-rs/cli": "^3.10.12",
+    "oxlint": "^1.94.0",
     "typescript": "~6.0.3"
   },
   "napi": {
