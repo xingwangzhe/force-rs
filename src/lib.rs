@@ -1,6 +1,8 @@
 #![deny(clippy::all)]
 
 use napi::bindgen_prelude::{Float64Array, Uint32Array};
+#[cfg(feature = "pgo")]
+use napi::{Error, Result, Status};
 use napi_derive::napi;
 use rayon::prelude::*;
 use std::time::Instant;
@@ -753,4 +755,21 @@ pub fn create_simulation(links: Uint32Array, n: u32) -> Simulation {
 pub fn sim_tick(state: Vec<f64>, links: Vec<u32>, n: u32, opts: ForceOptions) -> Vec<f64> {
     let mut core = SimulationCore::new(&links, n as usize);
     core.tick(&state, &opts)
+}
+
+#[cfg(feature = "pgo")]
+#[napi]
+pub fn flush_pgo_profile() -> Result<()> {
+    unsafe extern "C" {
+        fn __llvm_profile_write_file() -> i32;
+    }
+    let status = unsafe { __llvm_profile_write_file() };
+    if status == 0 {
+        Ok(())
+    } else {
+        Err(Error::new(
+            Status::GenericFailure,
+            "LLVM profile flush failed",
+        ))
+    }
 }

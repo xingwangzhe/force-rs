@@ -104,7 +104,11 @@ const build = (stage, flag) => {
       ...(musl ? ["-Ctarget-feature=-crt-static"] : []),
       ...(flag ? [flag] : []),
     ].join("\x1f"),
-    RUSTFLAGS: "",
+    RUSTFLAGS: [
+      ...originalFlags,
+      ...(musl ? ["-Ctarget-feature=-crt-static"] : []),
+      ...(flag ? [flag] : []),
+    ].join(" "),
   };
   const started = Date.now();
   if (glibc) {
@@ -114,7 +118,9 @@ const build = (stage, flag) => {
     copyFileSync(join(env.CARGO_TARGET_DIR, target, "release", `lib${libName}.so`), binary);
   } else {
     const napiArgs = ["x", "napi", "build", "--platform", "--release", "--target", target];
-    napiArgs.push("--esm", "--js", "index.js", "--dts", "index.d.ts");
+    if (stage === "instrumented") napiArgs.push("--features", "pgo");
+    if (stage === "instrumented") napiArgs.push("--no-js");
+    else napiArgs.push("--esm", "--js", "index.js", "--dts", "index.d.ts");
     run("bun", [...napiArgs, ...args, "--", "--locked"], env);
   }
   if (!existsSync(binary)) throw new Error(`Missing native binary: ${binary}`);

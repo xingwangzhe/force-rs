@@ -8,7 +8,7 @@
   "files": [
     "force-rs.win32-x64-msvc.node"
   ],
-  "description": "Fast force-directed 3D graph layout powered by Rust, a stackless Barnes-Hut octree, reusable CSR links and Rayon parallelism. Typed-array tick and bounded batched simulation APIs.",
+  "description": "Fast Rust force-directed 3D graph layout with a Barnes-Hut octree and Rayon. Installs only the native binary for your platform.",
   "keywords": [
     "3d",
     "barnes-hut",

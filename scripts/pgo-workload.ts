@@ -70,4 +70,5 @@ for (const shape of ["uniform", "clustered", "skewed", "extreme", "phyllotaxis"]
   }
 }
 if (!Number.isFinite(sink)) throw new Error("Non-finite workload output");
+if (training) native.flushPgoProfile();
 console.log(JSON.stringify(results));
