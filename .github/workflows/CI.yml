@@ -296,7 +296,7 @@ jobs:
       - name: List packages
         run: ls -la *.node 2>/dev/null || true
         shell: bash
-      - name: Publish
+      - name: Publish stable release
         run: |
           release_subject="$(git log -1 --format=%s)"
           if [[ "$release_subject" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
