@@ -113,7 +113,18 @@ const build = (stage, flag) => {
   const started = Date.now();
   if (glibc) {
     if (!target.endsWith("-linux-gnu")) throw new Error("--zig-glibc requires a Linux GNU target");
-    run("cargo", ["zigbuild", "--locked", "--release", "--target", `${target}.${glibc}`], env);
+    run(
+      "cargo",
+      [
+        "zigbuild",
+        "--locked",
+        "--release",
+        "--target",
+        `${target}.${glibc}`,
+        ...(stage === "instrumented" ? ["--features", "pgo"] : []),
+      ],
+      env,
+    );
     const libName = pkg.napi.binaryName.replaceAll("-", "_");
     copyFileSync(join(env.CARGO_TARGET_DIR, target, "release", `lib${libName}.so`), binary);
   } else {

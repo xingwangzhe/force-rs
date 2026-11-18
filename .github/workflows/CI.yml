@@ -63,13 +63,13 @@ jobs:
             target: x86_64-pc-windows-msvc
           - host: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-            build: bun run build:pgo --select --target x86_64-unknown-linux-gnu --use-napi-cross
+            build: bun run build:pgo --select --target x86_64-unknown-linux-gnu --zig-glibc 2.17
           - host: ubuntu-latest
             target: x86_64-unknown-linux-musl
             build: bun run build:pgo --select --target x86_64-unknown-linux-musl -x
           - host: ubuntu-24.04-arm
             target: aarch64-unknown-linux-gnu
-            build: bun run build:pgo --select --target aarch64-unknown-linux-gnu --use-napi-cross
+            build: bun run build:pgo --select --target aarch64-unknown-linux-gnu --zig-glibc 2.17
     name: stable - ${{ matrix.settings.target }} - node@24
     runs-on: ${{ matrix.settings.host }}
     steps:
@@ -99,12 +99,12 @@ jobs:
             target/
           key: ${{ matrix.settings.target }}-cargo-${{ matrix.settings.host }}
       - uses: mlugg/setup-zig@v2.2.1
-        if: ${{ contains(matrix.settings.target, 'musl') }}
+        if: ${{ contains(matrix.settings.target, 'linux') }}
         with:
-          version: 0.14.1
+          version: 0.17.0
       - name: Install cargo-zigbuild
         uses: taiki-e/install-action@v2.86.3
-        if: ${{ contains(matrix.settings.target, 'musl') }}
+        if: ${{ contains(matrix.settings.target, 'linux') }}
         env:
           GITHUB_TOKEN: ${{ github.token }}
         with:
