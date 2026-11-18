@@ -66,7 +66,7 @@ FORCE_BENCH_TICKS=342 \
 FORCE_BENCH_REPS=1 \
 FORCE_BENCH_WARMUP=0 \
 FORCE_BATCH_SIZE=10 \
-bun scripts/real-graph-benchmark.mjs /path/to/fixture.json
+bun scripts/real-graph-benchmark.ts /path/to/fixture.json
 ```
 
 `FORCE_BINDING_PATH` selects a preserved native addon. `FORCE_ALGORITHM` selects

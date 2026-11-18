@@ -1,0 +1,40 @@
+{
+  "name": "@xingwangzhe/force-rs-darwin-x64",
+  "version": "0.3.2",
+  "cpu": [
+    "x64"
+  ],
+  "main": "force-rs.darwin-x64.node",
+  "files": [
+    "force-rs.darwin-x64.node"
+  ],
+  "description": "Fast force-directed 3D graph layout powered by Rust, a stackless Barnes-Hut octree, reusable CSR links and Rayon parallelism. Typed-array tick and bounded batched simulation APIs.",
+  "keywords": [
+    "3d",
+    "barnes-hut",
+    "d3-force",
+    "d3-force-3d",
+    "force-directed",
+    "force-layout",
+    "graph-layout",
+    "napi-rs",
+    "octree",
+    "rust"
+  ],
+  "author": "xingwangzhe",
+  "license": "MIT",
+  "engines": {
+    "node": ">= 18"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/xingwangzhe/force-rs.git"
+  },
+  "os": [
+    "darwin"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  }
+}

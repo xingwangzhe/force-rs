@@ -29,6 +29,8 @@
 npm install @xingwangzhe/force-rs
 ```
 
+主包只包含 ESM 加载器和类型声明。CI 将各平台原生二进制发布为独立的作用域子包，npm 只安装当前平台对应的可选依赖。
+
 ## API
 
 ### `simTick(state, links, n, options)`
@@ -160,7 +162,7 @@ while (s[s.length - 1] > 0.001) {
 树实现仍位于 `src/lib.rs`，不依赖外部数值树库。详见
 [原始测量与复现方法](reports/build-performance-2026-10-18/README.md)、
 [算法与 crates 调研](scripts/ALGORITHM-RESEARCH.md)，真实 fixture 压测入口为
-`scripts/real-graph-benchmark.mjs`。
+`scripts/real-graph-benchmark.ts`。
 
 ## 协议
 

@@ -114,9 +114,7 @@ const build = (stage, flag) => {
     copyFileSync(join(env.CARGO_TARGET_DIR, target, "release", `lib${libName}.so`), binary);
   } else {
     const napiArgs = ["x", "napi", "build", "--platform", "--release", "--target", target];
-    if (pkg.napi.binaryName === "mermaid-rs") napiArgs.push("--no-js");
-    if (pkg.napi.binaryName === "cjk-font-split-native")
-      napiArgs.push("--esm", "--js", "index.mjs", "--dts", "index.d.mts");
+    napiArgs.push("--esm", "--js", "index.js", "--dts", "index.d.ts");
     run("bun", [...napiArgs, ...args, "--", "--locked"], env);
   }
   if (!existsSync(binary)) throw new Error(`Missing native binary: ${binary}`);
@@ -142,11 +140,12 @@ if (musl) {
     "RAYON_NUM_THREADS=4",
     "node:24-alpine",
     "node",
-    "scripts/pgo-workload.mjs",
+    "--experimental-strip-types",
+    "scripts/pgo-workload.ts",
     "train",
   ]);
 } else {
-  run(process.execPath, ["scripts/pgo-workload.mjs", "train"], {
+  run(process.execPath, ["--experimental-strip-types", "scripts/pgo-workload.ts", "train"], {
     LLVM_PROFILE_FILE: profilePattern,
     PGO_BINDING_PATH: binary,
     RAYON_NUM_THREADS: "4",
@@ -196,11 +195,12 @@ if (compare) {
       "RAYON_NUM_THREADS=4",
       "node:24-alpine",
       "node",
-      "scripts/compare-pgo.mjs",
+      "--experimental-strip-types",
+      "scripts/compare-pgo.ts",
       `/work/target/pgo/${target}`,
     ]);
   } else {
-    run(process.execPath, ["scripts/compare-pgo.mjs", output]);
+    run(process.execPath, ["--experimental-strip-types", "scripts/compare-pgo.ts", output]);
   }
 }
 if (select) {

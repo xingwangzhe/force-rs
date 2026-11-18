@@ -1,0 +1,43 @@
+{
+  "name": "@xingwangzhe/force-rs-linux-arm64-gnu",
+  "version": "0.3.2",
+  "cpu": [
+    "arm64"
+  ],
+  "main": "force-rs.linux-arm64-gnu.node",
+  "files": [
+    "force-rs.linux-arm64-gnu.node"
+  ],
+  "description": "Fast force-directed 3D graph layout powered by Rust, a stackless Barnes-Hut octree, reusable CSR links and Rayon parallelism. Typed-array tick and bounded batched simulation APIs.",
+  "keywords": [
+    "3d",
+    "barnes-hut",
+    "d3-force",
+    "d3-force-3d",
+    "force-directed",
+    "force-layout",
+    "graph-layout",
+    "napi-rs",
+    "octree",
+    "rust"
+  ],
+  "author": "xingwangzhe",
+  "license": "MIT",
+  "engines": {
+    "node": ">= 18"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/xingwangzhe/force-rs.git"
+  },
+  "os": [
+    "linux"
+  ],
+  "libc": [
+    "glibc"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  }
+}

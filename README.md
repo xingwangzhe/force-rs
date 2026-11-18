@@ -29,6 +29,8 @@ Fast force-directed 3D graph layout powered by **Rust + a contiguous Barnes-Hut 
 npm install @xingwangzhe/force-rs
 ```
 
+The root package contains only the ESM loader and types. CI publishes each native binary as a scoped platform package, and npm installs only the matching optional dependency.
+
 ## API
 
 ### `simTick(state, links, n, options)`
@@ -169,7 +171,7 @@ PGO improved the balanced corpus geometric mean by only 1.1%, below the existing
 The tree remains specialized code in `src/lib.rs`, with no external numerical
 tree crate. See [raw measurements and reproduction](reports/build-performance-2026-10-18/README.md),
 [algorithm and crate research](scripts/ALGORITHM-RESEARCH.md), and the consumer
-fixture runner `scripts/real-graph-benchmark.mjs`.
+fixture runner `scripts/real-graph-benchmark.ts`.
 
 ## License
 

@@ -133,4 +133,7 @@ force-rs.wasi*.js
 wasi-worker*.mjs
 
 # npm artifacts (platform sub-packages)
-/npm
+/npm/*
+!/npm/
+!/npm/*/
+!/npm/*/package.json

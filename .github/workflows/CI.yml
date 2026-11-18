@@ -34,6 +34,7 @@ jobs:
         uses: actions/setup-node@v7.0.0
         with:
           node-version: 24
+          registry-url: https://registry.npmjs.org
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
@@ -165,7 +166,7 @@ jobs:
         run: ls -R .
         shell: bash
       - name: Test bindings
-        run: node --test force.test.mjs
+        run: node --experimental-strip-types --test force.test.ts
   test-linux-binding:
     name: Test ${{ matrix.target }} - node@${{ matrix.node }}
     needs:
@@ -223,7 +224,7 @@ jobs:
           image: ${{ steps.docker.outputs.IMAGE }}
           name: test-bindings-${{ matrix.target }}
           options: -v ${{ github.workspace }}:${{ github.workspace }} -w ${{ github.workspace }} --platform ${{ steps.docker.outputs.PLATFORM }}
-          args: node --test force.test.mjs
+          args: node --experimental-strip-types --test force.test.ts
   benchmark:
     name: Deterministic benchmark
     runs-on: ubuntu-latest
@@ -277,6 +278,10 @@ jobs:
         uses: actions/setup-node@v7.0.0
         with:
           node-version: 24
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+      - name: Update npm for trusted publishing
+        run: npm install --global npm@11.15.0
       - name: Install dependencies
         run: bun install
       - name: Download all artifacts
@@ -286,6 +291,8 @@ jobs:
       - name: Move artifacts to root
         run: |
           find artifacts -type f \( -name "*.node" -o -name "*.wasm" \) -exec cp {} . \;
+      - name: Split platform packages
+        run: bunx --no-install napi artifacts --output-dir artifacts --npm-dir npm
       - name: List packages
         run: ls -la *.node 2>/dev/null || true
         shell: bash

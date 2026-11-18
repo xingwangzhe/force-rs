@@ -1,6 +1,6 @@
 {
   "name": "@xingwangzhe/force-rs",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Fast force-directed 3D graph layout powered by Rust, a stackless Barnes-Hut octree, reusable CSR links and Rayon parallelism. Typed-array tick and bounded batched simulation APIs.",
   "keywords": [
     "3d",
@@ -15,6 +15,7 @@
     "rust"
   ],
   "license": "MIT",
+  "type": "module",
   "author": "xingwangzhe",
   "repository": {
     "type": "git",
@@ -22,24 +23,25 @@
   },
   "files": [
     "index.d.ts",
-    "index.js",
-    "force-rs.*.node"
+    "index.js"
   ],
   "main": "index.js",
   "types": "index.d.ts",
   "scripts": {
-    "build": "napi build --platform --release",
-    "test": "node --test force.test.mjs",
-    "benchmark": "node benchmark.mjs",
+    "build": "napi build --platform --release --esm --js index.js --dts index.d.ts",
+    "test": "node --experimental-strip-types --test force.test.ts",
+    "benchmark": "bun run benchmark.ts",
     "lint": "oxlint",
     "artifacts": "napi artifacts",
-    "build:pgo": "node scripts/build-pgo.mjs",
-    "benchmark:pgo": "node scripts/build-pgo.mjs --compare"
+    "build:pgo": "bun run scripts/build-pgo.ts",
+    "benchmark:pgo": "bun run scripts/build-pgo.ts --compare",
+    "prepublishOnly": "napi pre-publish --npm-dir npm --tag-style npm --no-gh-release"
   },
   "devDependencies": {
     "@napi-rs/cli": "^3.10.12",
     "oxlint": "^1.94.0",
-    "typescript": "~6.0.3"
+    "typescript": "~6.0.3",
+    "@types/node": "^26.6.6"
   },
   "napi": {
     "binaryName": "force-rs",
@@ -54,5 +56,20 @@
   },
   "engines": {
     "node": ">= 18"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "workspaces": [
+    "npm/*"
+  ],
+  "optionalDependencies": {
+    "@xingwangzhe/force-rs-linux-x64-gnu": "workspace:*",
+    "@xingwangzhe/force-rs-win32-x64-msvc": "workspace:*",
+    "@xingwangzhe/force-rs-linux-x64-musl": "workspace:*",
+    "@xingwangzhe/force-rs-linux-arm64-gnu": "workspace:*",
+    "@xingwangzhe/force-rs-darwin-arm64": "workspace:*",
+    "@xingwangzhe/force-rs-darwin-x64": "workspace:*"
   }
 }
