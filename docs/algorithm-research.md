@@ -55,7 +55,7 @@ positions are computed once per tick. Arithmetic evaluation order is preserved
 for each force contribution. Parallel centroid reductions retain their existing
 floating-point reduction behavior.
 
-Use `scripts/real-graph-benchmark.ts` for a consumer-exported JSON fixture. Set
+Use `benchmark/real-graph.ts` for a consumer-exported JSON fixture. Set
 `FORCE_BINDING_PATH` to a preserved baseline or candidate addon, and control
 `RAYON_NUM_THREADS`, `FORCE_BENCH_TICKS`, `FORCE_BENCH_REPS`, and `FORCE_ALGORITHM`.
 Benchmark processes must run without a competing compiler or full consumer build.

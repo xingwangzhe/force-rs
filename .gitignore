@@ -118,6 +118,13 @@ dist
 
 /target
 
+# Generated benchmark reports and LLVM profiles
+/reports/
+/benchmark/reports/
+/benchmark-results/
+*.profraw
+*.profdata
+
 .pnp.*
 .yarn/*
 !.yarn/patches

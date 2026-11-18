@@ -1,5 +1,5 @@
 // Benchmark a consumer-exported fixture rather than a synthetic graph.
-// Example: RAYON_NUM_THREADS=4 bun scripts/real-graph-benchmark.ts fixture.json
+// Example: RAYON_NUM_THREADS=4 bun benchmark/real-graph.ts fixture.json
 import { readFileSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { performance } from "node:perf_hooks";

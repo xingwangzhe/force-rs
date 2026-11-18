@@ -160,9 +160,8 @@ while (s[s.length - 1] > 0.001) {
 3% 选择阈值，因此选择无 PGO 的发布构建。
 
 树实现仍位于 `src/lib.rs`，不依赖外部数值树库。详见
-[原始测量与复现方法](reports/build-performance-2026-10-18/README.md)、
-[算法与 crates 调研](scripts/ALGORITHM-RESEARCH.md)，真实 fixture 压测入口为
-`scripts/real-graph-benchmark.ts`。
+[算法与 crates 调研](docs/algorithm-research.md)和[性能说明](docs/performance.md)。
+Consumer fixture 基准工具位于 `benchmark/`。
 
 ## 协议
 
@@ -170,4 +169,4 @@ MIT
 
 ## Runtime-focused release builds
 
-Native CI artifacts use full LTO, one code-generation unit, and O3, while preserving the existing CPU instruction baseline. CI trains a profile-guided optimization (PGO) candidate using representative graph workloads and publishes it only when the runtime comparison passes; otherwise it publishes the unprofiled release. `bun run build:pgo` produces the optimized addon; `bun run benchmark:pgo` compares it with an unprofiled release. Install `llvm-tools-preview` with the same Rust toolchain first. Details and measurement limits: [scripts/PERFORMANCE.md](scripts/PERFORMANCE.md).
+Native CI artifacts use full LTO, one code-generation unit, and O3, while preserving the existing CPU instruction baseline. CI trains a profile-guided optimization (PGO) candidate using representative graph workloads and publishes it only when the runtime comparison passes; otherwise it publishes the unprofiled release. `bun run build:pgo` produces the optimized addon; `bun run benchmark:pgo` compares it with an unprofiled release. Install `llvm-tools-preview` with the same Rust toolchain first. Details and measurement limits: [performance guide](docs/performance.md).

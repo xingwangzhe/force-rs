@@ -169,9 +169,9 @@ PGO improved the balanced corpus geometric mean by only 1.1%, below the existing
 3% selection threshold, so the unprofiled release was selected on this machine.
 
 The tree remains specialized code in `src/lib.rs`, with no external numerical
-tree crate. See [raw measurements and reproduction](reports/build-performance-2026-10-18/README.md),
-[algorithm and crate research](scripts/ALGORITHM-RESEARCH.md), and the consumer
-fixture runner `scripts/real-graph-benchmark.ts`.
+tree crate. See the [algorithm research](docs/algorithm-research.md) and
+[performance guide](docs/performance.md). Consumer fixture benchmarking tools
+live under `benchmark/`.
 
 ## License
 
@@ -179,4 +179,4 @@ MIT
 
 ## Runtime-focused release builds
 
-Native CI artifacts use full LTO, one code-generation unit, and O3, while preserving the existing CPU instruction baseline. CI trains a profile-guided optimization (PGO) candidate using representative graph workloads and publishes it only when the runtime comparison passes; otherwise it publishes the unprofiled release. `bun run build:pgo` produces the optimized addon; `bun run benchmark:pgo` compares it with an unprofiled release. Install `llvm-tools-preview` with the same Rust toolchain first. Details and measurement limits: [scripts/PERFORMANCE.md](scripts/PERFORMANCE.md).
+Native CI artifacts use full LTO, one code-generation unit, and O3, while preserving the existing CPU instruction baseline. CI trains a profile-guided optimization (PGO) candidate using representative graph workloads and publishes it only when the runtime comparison passes; otherwise it publishes the unprofiled release. `bun run build:pgo` produces the optimized addon; `bun run benchmark:pgo` compares it with an unprofiled release. Install `llvm-tools-preview` with the same Rust toolchain first. Details and measurement limits: [performance guide](docs/performance.md).

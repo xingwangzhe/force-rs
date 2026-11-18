@@ -1,0 +1,17 @@
+# Only the runtime loader and declarations ship in the root package.
+reports/
+benchmark/
+scripts/
+test/
+src/
+npm/
+target/
+artifacts/
+.github/
+.gitignore
+AGENTS.md
+bun.lock
+Cargo.toml
+Cargo.lock
+build.rs
+tsconfig.json
